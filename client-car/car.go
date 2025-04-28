@@ -11,6 +11,15 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+func route_generator(){
+	numberOfCities = rando de 0 a 4
+	route[]
+
+	for i in range numberOfCities {
+		route[i] = randon(list of numberOfCities)
+	}
+}
+
 func main() {
 	// Semente para gerar posições diferentes
 	rand.Seed(time.Now().UnixNano())
