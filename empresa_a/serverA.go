@@ -1,5 +1,19 @@
 package main
 
+
+/*  O SERVER A MANDA REQUISIÇÕES A OUTROS SERVIDORES
+	Carro(MQTT Client) -- MQTT --> Servidor_A
+    Servidor_A -- REST POST /reservar --> Empresa_B
+    Servidor_A -- REST POST /reservar --> Empresa_C
+    Servidor_A -- MQTT --> Carro (responde OK ou Falha)
+
+	
+
+
+
+*/
+
+
 import (
 	"fmt"
 	"log"

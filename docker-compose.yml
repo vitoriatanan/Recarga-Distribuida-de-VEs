@@ -13,7 +13,8 @@ services:
     depends_on:
       - mosquitto
       
-  server:
-    build: ./server
+  empresa_a:
+    build: ./empresa_a
     depends_on:
     - mosquitto
+  
