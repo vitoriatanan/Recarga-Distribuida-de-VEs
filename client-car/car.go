@@ -48,7 +48,12 @@ func main() {
 		y := rand.Intn(1000) // coordenada Y entre 0 e 999
 
 		position := fmt.Sprintf("Carro A - posição x:%d, y:%d", x, y)
+
+		car_route := route_generator()        // gera uma rota aleatória para o carro
+		fmt.Sprintf(" - Rota: %v", car_route) // adiciona a rota ao vetor de posições
+
 		token := client.Publish("car/position", 0, false, position)
+
 		token.Wait()
 
 		fmt.Println("📤 Enviado:", position)
