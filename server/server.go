@@ -15,7 +15,7 @@ func main() {
 
 	router.GET("/ping", func(c *gin.Context) {
 		serverName := os.Getenv("SERVER_NAME")
-		c.STRING(http.StatusOK, fmt.Sprintf("pong from %s", serverName))
+		c.String(http.StatusOK, fmt.Sprintf("pong from %s", serverName))
 	})
 
 	router.GET("/call", func(c *gin.Context) {
