@@ -7,10 +7,6 @@ package main
     Servidor_A -- REST POST /reservar --> Empresa_C
     Servidor_A -- MQTT --> Carro (responde OK ou Falha)
 
-	
-
-
-
 */
 
 
