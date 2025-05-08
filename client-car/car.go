@@ -11,18 +11,21 @@ import (
 
 var all_cities = []string{"São Paulo", "Rio de Janeiro", "Belo Horizonte", "Salvador", "Curitiba"} // cidades disponíveis para os carros
 
-/*GERA ROTAS ALEATÓRIAS PARA OS CARROS*/
-func route_generator() []string {
-	numberOfCities := rand.Intn(4) + 2      // número de cidades entre 2 e 5
-	route := make([]string, numberOfCities) // vetor de rotas com o número de cidades
+func route_generator() []string { // ARRUMAR ESSA FUNÇAO QUE TÁ ESTRANHA, ROTAS BEM RUINS!!!
+	numberOfCities := rand.Intn(4) + 2 // número de cidades entre 2 e 5
+	route := make([]string, 0, numberOfCities)
+	usedCities := make(map[string]bool)
 
-	for i := 0; i < numberOfCities; i++ {
-		// Adiciona cidades aleatórias ao vetor de rotas
-		randon_city := rand.Intn(len(all_cities)) // número aleatório entre 0 e o número de cidades disponíveis
-		route[i] = all_cities[randon_city]        // número aleatório entre 0 e o número de cidades disponíveis
+	for len(route) < numberOfCities {
+		randomCity := all_cities[rand.Intn(len(all_cities))]
+
+		if !usedCities[randomCity] {
+			route = append(route, randomCity)
+			usedCities[randomCity] = true
+		}
 	}
 
-	return route // retorna o vetor de rotas
+	return route
 }
 
 func main() {
@@ -49,10 +52,10 @@ func main() {
 
 		position := fmt.Sprintf("Carro A - posição x:%d, y:%d", x, y)
 
-		car_route := route_generator()        // gera uma rota aleatória para o carro
-		fmt.Sprintf(" - Rota: %v", car_route) // adiciona a rota ao vetor de posições
+		//car_route := route_generator()      // gera uma rota aleatória para o carro
+		//fmt.Println(" - Rota: ", car_route) // adiciona a rota ao vetor de posições
 
-		token := client.Publish("car/position", 0, false, position)
+		token := client.Publish("car/position", 0, false, position) // publica a posição no tópico car/position
 
 		token.Wait()
 
