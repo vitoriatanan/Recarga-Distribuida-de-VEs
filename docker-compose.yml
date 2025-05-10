@@ -7,20 +7,28 @@ services:
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
 
-  client-car-1:
-    build: ./client-car
-    depends_on:
-      - mosquitto
-
-  client-car-2:
+  client-car:
     build: ./client-car
     depends_on:
       - mosquitto
       
-  server_a:
-    build: ./empresa_a
+  empresa-a:
+    build: ./server
     depends_on:
       - mosquitto
     ports:
       - "8081:8081"
+    environment:
+      - INSTANCE_NAME=empresa-a # Pass the instance name as an environment variable
+  
+  empresa-b:
+    build: ./server
+    depends_on:
+      - mosquitto
+      - empresa-a # Ensure empresa-a is started before empresa-b
+    ports:
+      - "8082:8082"
+    environment:
+      - INSTANCE_NAME=empresa-b # Pass the instance name as an environment variable
+
   
