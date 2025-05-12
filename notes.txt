@@ -1,2 +1,4 @@
 COMANDO PARA EXECUTAR OS CONTAINERS:
 docker-compose up --build
+
+

@@ -1,20 +1,45 @@
 services:
-  mosquitto:
+  mqtt:
     image: eclipse-mosquitto
-    container_name: mosquitto
     ports:
       - "1883:1883"
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
 
+    
+  servidor_a:
+    build: ./server
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVER_ID=A
+    depends_on:
+      - mqtt
+    command: sh -c "sleep 30 && ./server"
+    
+  servidor_b:
+    build: ./server
+    ports:
+      - "8082:8080"
+    environment:
+      - SERVER_ID=B
+    depends_on:
+      - mqtt
+    command: sh -c "sleep 30 && ./server"
+
+  servidor_c:
+    build: ./server
+    ports:
+      - "8083:8080"
+    environment:
+      - SERVER_ID=C
+    depends_on:
+      - mqtt
+    command: sh -c "sleep 30 && ./server"
 
   client-car:
     build: ./client-car
     depends_on:
-      - mosquitto
-      
-  empresa_a:
-    build: ./empresa_a
-    depends_on:
-    - mosquitto
+      - mqtt
+    command: sh -c "sleep 30 && ./server"
   
