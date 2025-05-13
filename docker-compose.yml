@@ -3,7 +3,7 @@ services:
     image: eclipse-mosquitto
     container_name: mosquitto
     ports:
-      - "1883:1883"
+      - "1884:1883"
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
 
@@ -11,6 +11,7 @@ services:
     build: ./client-car
     depends_on:
       - mosquitto
+      - empresa-c # Ensure empresa-c is started before client-car
       
   empresa-a:
     build: ./server
@@ -19,7 +20,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - INSTANCE_NAME="empresa-a" # Pass the instance name as an environment variable
+      - INSTANCE_NAME=empresa-a # Pass the instance name as an environment variable
       - PORT=8081 # Pass the port as
   
   empresa-b:
@@ -30,7 +31,7 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - INSTANCE_NAME="empresa-b" # Pass the instance name as an environment variable
+      - INSTANCE_NAME=empresa-b # Pass the instance name as an environment variable
       - PORT=8082 # Pass the port as an environment variable
 
   empresa-c: 
@@ -42,7 +43,7 @@ services:
     ports:
       - "8083:8083"
     environment:
-      - INSTANCE_NAME="empresa-c" # Pass the instance name as an environment variable
+      - INSTANCE_NAME=empresa-c # Pass the instance name as an environment variable
       - PORT=8083 # Pass the port as
 
   

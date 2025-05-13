@@ -13,7 +13,7 @@ import (
 )
 
 // Informações sobre o servidor
-var serverName = os.Getenv("INSTANCE_NAME")
+var serverName string
 var serverLocation []int
 var carRoute []int
 var mqttClient mqtt.Client
@@ -116,10 +116,28 @@ func startHTTPServer() {
 	router.Run(":" + port)
 }
 
+// Função para enviar mensagens entre servidores pela API
+// func postLocation(serverName string, message string) {
+// 	url := fmt.Sprintf("http://%s:8080/server/position", serverName)
+// 	resp, err := http.Post(url, "application/json", nil)
+// 	if err != nil {
+// 		log.Fatalf("Erro ao enviar mensagem para %s: %v", serverName, err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	if resp.StatusCode != http.StatusOK {
+// 		log.Printf("Erro ao enviar mensagem para %s: %s", serverName, resp.Status)
+// 	} else {
+// 		fmt.Printf("✅ Mensagem enviada para %s: %s\n", serverName, message)
+// 	}
+// }
+
 // ======== Função Principal ========
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+
+	serverName = os.Getenv("INSTANCE_NAME")
 
 	fmt.Println("🚀 Servidor:", serverName)
 
