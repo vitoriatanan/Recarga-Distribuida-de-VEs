@@ -19,7 +19,8 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - INSTANCE_NAME=empresa-a # Pass the instance name as an environment variable
+      - INSTANCE_NAME="empresa-a" # Pass the instance name as an environment variable
+      - PORT=8081 # Pass the port as
   
   empresa-b:
     build: ./server
@@ -29,6 +30,19 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - INSTANCE_NAME=empresa-b # Pass the instance name as an environment variable
+      - INSTANCE_NAME="empresa-b" # Pass the instance name as an environment variable
+      - PORT=8082 # Pass the port as an environment variable
+
+  empresa-c: 
+    build: ./server
+    depends_on:
+      - mosquitto
+      - empresa-a
+      - empresa-b # Ensure empresa-a is started before empresa-c
+    ports:
+      - "8083:8083"
+    environment:
+      - INSTANCE_NAME="empresa-c" # Pass the instance name as an environment variable
+      - PORT=8083 # Pass the port as
 
   
