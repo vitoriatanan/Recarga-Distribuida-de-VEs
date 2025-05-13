@@ -9,73 +9,124 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/gin-gonic/gin" // Framework Gin para criar APIs HTTP
+	"github.com/gin-gonic/gin"
 )
 
+// Informações sobre o servidor
+var serverName = os.Getenv("INSTANCE_NAME")
+var serverLocation []int
+var carRoute []int
+var mqttClient mqtt.Client
+
+// ======== Funções utilitárias ========
+
 func getHostname() string {
-	// Obtém o nome pela variável de ambiente HOSTNAME
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatalf("Erro ao obter o nome do host: %v", err)
 	}
-	// Se o nome do host não estiver definido, usa o nome do container
 	if hostname == "" {
-		hostname = os.Getenv("HOSTNAME")
+		hostname = os.Getenv("INSTANCE_NAME")
 	}
 	return hostname
 }
 
-// func getLocation(c *gin.Context) []string {
-// 	return
-// }
+func setServerLocation() {
+	switch serverName {
+	case "empresa-a":
+		serverLocation = []int{0, 250}
+	case "empresa-b":
+		serverLocation = []int{251, 500}
+	case "empresa-c":
+		serverLocation = []int{501, 750}
+	default:
+		serverLocation = []int{-1, -1}
+	}
+}
 
-func main() {
-	// Semente para gerar posições diferentes
-	rand.Seed(time.Now().UnixNano())
+// Função que verifica se a localização do carro está dentro do limite da empresa
+func isCarInCompanyLimits(carLocation []int) bool {
+	if len(carLocation) != 4 {
+		return false
+	}
 
-	serverName := getHostname() // Obtém o nome do servidor
-	fmt.Println("🚀 Servidor:", serverName)
+	x, y := carLocation[0], carLocation[1]
+	//destX, destY := carLocation[2], carLocation[3]
 
-	x := rand.Intn(1000) // coordenada X entre 0 e 999
-	y := rand.Intn(1000) // coordenada Y entre 0 e 999
+	if x >= serverLocation[0] && x <= serverLocation[1] && y >= serverLocation[0] && y <= serverLocation[1] {
+		fmt.Println("🚗 O carro está dentro dos limites da empresa.")
+		return true
+		// if destX >= serverLocation[0] && destX <= serverLocation[1] && destY >= serverLocation[0] && destY <= serverLocation[1] {
+		// 	return true
+		// }
+	}
+	fmt.Println("🚗 O carro está fora dos limites da empresa.")
+	return false
+}
 
-	router := gin.Default() // Cria um novo roteador Gin
-	router.GET("/car/position", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"x": x, "y": y}) // Retorna a posição do servidor para os outros servidores
-	})
+// ======== MQTT ========
 
-	router.Run("localhost:8080") // Inicia o servidor HTTP na porta 8080
-
+func initMQTT() {
 	opts := mqtt.NewClientOptions().
 		AddBroker("tcp://mosquitto:1883").
-		SetClientID("server-" + getHostname()) // Usa o nome do container como parte do ClientID
-	client := mqtt.NewClient(opts) // Cria um novo cliente MQTT
+		SetClientID("server-" + getHostname())
 
-	// Conecta ao broker MQTT
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
+	mqttClient = mqtt.NewClient(opts)
+
+	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatalf("Erro de conexão MQTT: %v", token.Error())
 	}
-	fmt.Println("✅ Servidor A conectado ao broker MQTT!")
+	fmt.Printf("✅ %s conectado ao broker MQTT!\n", serverName)
 
-	defer client.Disconnect(250) // Desconecta do broker MQTT após o término
+	subscribeToCarPosition()
+}
 
-	// Inscreve-se no tópico "car/position" para receber mensagens do carro
-	// Quando uma mensagem é recebida, ela é processada na função de callback
-	if token := client.Subscribe("car/position", 0, func(client mqtt.Client, msg mqtt.Message) {
+func subscribeToCarPosition() {
+	if token := mqttClient.Subscribe("car/position", 0, func(client mqtt.Client, msg mqtt.Message) {
 		position := string(msg.Payload())
 		fmt.Println("📥 Posição recebida do carro:", position)
+
+		// Transformar a posição recebida de string para slice de inteiros
+		var x, y, destX, destY int
+		fmt.Sscanf(position, "%d, %d, %d, %d", &x, &y, &destX, &destY)
+		carRoute = []int{x, y, destX, destY}
+		isCarInCompanyLimits(carRoute)
+
 	}); token.Wait() && token.Error() != nil {
 		log.Fatalf("Erro ao se inscrever no tópico: %v", token.Error())
 	}
 }
 
-// func sendReservationRequest(url string, position string) bool {
-// 	jsonData := []byte(fmt.Sprintf(`{"car_position":"%s"}`, position))
-// 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-// 	if err != nil {
-// 		log.Println("Erro ao enviar requisição para", url, "->", err)
-// 		return false
-// 	}
-// 	defer resp.Body.Close()
-// 	return resp.StatusCode == http.StatusOK
-// }
+// ======== HTTP Server ========
+
+func startHTTPServer() {
+	router := gin.Default()
+
+	router.GET("/server/position", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"x": serverLocation[0],
+			"y": serverLocation[1],
+		})
+	})
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	router.Run(":" + port)
+}
+
+// ======== Função Principal ========
+
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	fmt.Println("🚀 Servidor:", serverName)
+
+	setServerLocation()
+	fmt.Println("📍 Localização do servidor:", serverLocation)
+
+	initMQTT()
+
+	startHTTPServer()
+}
