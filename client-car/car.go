@@ -24,6 +24,15 @@ func main() {
 	startCarLoop(client)
 }
 
+
+/**
+*  Realiza a conexão de um cliente MQTT ao broker especificado.
+*  @param: 
+*     - broker (string): URL do broker MQTT.
+*     - clientID (string): Identificador único do cliente.
+*  @returns: 
+*     - mqtt.Client: cliente MQTT conectado ao broker.
+*/
 func connectMQTT(broker, clientID string) mqtt.Client {
 	opts := mqtt.NewClientOptions().
 		AddBroker(broker).
@@ -40,11 +49,26 @@ func connectMQTT(broker, clientID string) mqtt.Client {
 	return client
 }
 
+/**
+*  Desconecta o cliente MQTT do broker.
+*  @param: 
+*     - client (mqtt.Client): cliente MQTT a ser desconectado.
+*  @returns: nenhum
+*/
 func disconnectMQTT(client mqtt.Client) {
 	client.Disconnect(250)
 	fmt.Println("🚪 Cliente desconectado.")
 }
 
+
+/**
+*  Publica uma mensagem em um tópico MQTT.
+*  @param: 
+*     - client (mqtt.Client): cliente MQTT utilizado para publicar.
+*     - topic (string): nome do tópico MQTT.
+*     - payload (string): conteúdo da mensagem a ser enviada.
+*  @returns: nenhum
+*/
 func publish(client mqtt.Client, topic string, payload string) {
 	token := client.Publish(topic, 0, false, payload)
 	token.Wait()
@@ -54,6 +78,15 @@ func publish(client mqtt.Client, topic string, payload string) {
 	fmt.Printf("📄 Publicado no tópico %s\n", topic)
 }
 
+
+/**
+*  Inscreve o cliente em um tópico MQTT para receber mensagens.
+*  @param: 
+*     - client (mqtt.Client): cliente MQTT que fará a inscrição.
+*     - topic (string): tópico no qual o cliente se inscreverá.
+*     - callback (mqtt.MessageHandler): função que será executada ao receber mensagens.
+*  @returns: nenhum
+*/
 func subscribe(client mqtt.Client, topic string, callback mqtt.MessageHandler) {
 	token := client.Subscribe(topic, 0, callback)
 	token.Wait()
@@ -63,10 +96,25 @@ func subscribe(client mqtt.Client, topic string, callback mqtt.MessageHandler) {
 	fmt.Printf("📡 Inscrito no tópico %s\n", topic)
 }
 
+/**
+*  Função callback padrão para lidar com mensagens recebidas.
+*  @param: 
+*     - client (mqtt.Client): cliente MQTT que recebeu a mensagem.
+*     - msg (mqtt.Message): mensagem MQTT recebida.
+*  @returns: nenhum
+*/
 func defaultMessageHandler(client mqtt.Client, msg mqtt.Message) {
 	fmt.Printf("📩 Mensagem recebida [%s]: %s\n", msg.Topic(), msg.Payload())
 }
 
+
+/**
+*  Responsável por gerar coordenadas aleatórias de origem e destino para o carro.
+*  @param: nenhum
+*  @returns: 
+*     - (int, int, int, int): coordenadas de origem (originX, originY)
+*       e destino (destinationX, destinationY), todas variando de 0 a 999.
+*/
 func generatePosition() (int, int, int, int) {
 
 	originX := rand.Intn(1000)      // coordenada X entre 0 e 999
@@ -77,6 +125,14 @@ func generatePosition() (int, int, int, int) {
 	return originX, originY, destinationX, destinationY
 }
 
+/**
+*  Inicia o loop de envio de posições do carro.
+*  A cada 2 segundos, gera coordenadas de origem e destino,
+*  e publica nos tópicos 'car/position' e 'car/recarga'.
+*  @param: 
+*     - client (mqtt.Client): cliente MQTT usado para enviar as mensagens.
+*  @returns: nenhum
+*/
 func startCarLoop(client mqtt.Client) {
 	for {
 		origX, origY, destX, destY := generatePosition()

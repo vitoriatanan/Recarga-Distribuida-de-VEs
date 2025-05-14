@@ -18,8 +18,14 @@ var serverLocation []int
 var carRoute []int
 var mqttClient mqtt.Client
 
-// ======== Funções utilitárias ========
+// ======== FUNÇÕES UTILITÁRIAS ========
 
+/**
+*  Obtém o nome do host atual da máquina ou da variável de ambiente INSTANCE_NAME.
+*  @param: nenhum
+*  @returns: 
+*     - (string): nome do host ou da instância.
+*/
 func getHostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -31,6 +37,12 @@ func getHostname() string {
 	return hostname
 }
 
+/**
+*  Define os limites da localização do servidor de acordo com seu nome.
+*  Os limites são configurados em pares de inteiros, que indicam a área em um grid.
+*  @param: nenhum
+*  @returns: nenhum
+*/
 func setServerLocation() {
 	switch serverName {
 	case "empresa-a":
@@ -44,7 +56,13 @@ func setServerLocation() {
 	}
 }
 
-// Função que verifica se a localização do carro está dentro do limite da empresa
+/**
+*  Verifica se a posição atual do carro está dentro dos limites da empresa.
+*  @param:
+*     - carLocation ([]int): slice contendo as posições x, y, destX, destY do carro.
+*  @returns: 
+*     - (bool): true se a posição estiver dentro dos limites, false caso contrário.
+*/
 func isCarInCompanyLimits(carLocation []int) bool {
 	if len(carLocation) != 4 {
 		return false
@@ -65,7 +83,11 @@ func isCarInCompanyLimits(carLocation []int) bool {
 }
 
 // ======== MQTT ========
-
+/**
+*  Inicializa a conexão MQTT, define opções de conexão e se inscreve no tópico de posições de carro.
+*  @param: nenhum
+*  @returns: nenhum
+*/
 func initMQTT() {
 	opts := mqtt.NewClientOptions().
 		AddBroker("tcp://mosquitto:1883").
@@ -81,6 +103,12 @@ func initMQTT() {
 	subscribeToCarPosition()
 }
 
+/**
+*  Inscreve o servidor no tópico 'car/position' e define a função callback 
+*  para processar as mensagens recebidas, verificando se o carro está nos limites.
+*  @param: nenhum
+*  @returns: nenhum
+*/
 func subscribeToCarPosition() {
 	if token := mqttClient.Subscribe("car/position", 0, func(client mqtt.Client, msg mqtt.Message) {
 		position := string(msg.Payload())
@@ -98,7 +126,12 @@ func subscribeToCarPosition() {
 }
 
 // ======== HTTP Server ========
-
+/**
+*  Inicia o servidor HTTP usando o framework Gin.
+*  Cria a rota '/server/position' para retornar a posição atual do servidor.
+*  @param: nenhum
+*  @returns: nenhum
+*/
 func startHTTPServer() {
 	router := gin.Default()
 
@@ -132,8 +165,14 @@ func startHTTPServer() {
 // 	}
 // }
 
-// ======== Função Principal ========
-
+// ======== FUNÇÃO PRINCIPAL ========
+/**
+*  Função principal do programa.
+*  Inicializa a semente de números aleatórios, define o nome e localização do servidor,
+*  conecta ao broker MQTT e inicia o servidor HTTP.
+*  @param: nenhum
+*  @returns: nenhum
+*/
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
