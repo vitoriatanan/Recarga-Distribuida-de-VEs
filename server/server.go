@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	functions "server/functions"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/gin-gonic/gin"
 )
@@ -18,80 +20,16 @@ var serverLocation []int
 var carRoute []int
 var mqttClient mqtt.Client
 
-// ======== FUNÇÕES UTILITÁRIAS ========
-
-/**
-*  Obtém o nome do host atual da máquina ou da variável de ambiente INSTANCE_NAME.
-*  @param: nenhum
-*  @returns: 
-*     - (string): nome do host ou da instância.
-*/
-func getHostname() string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatalf("Erro ao obter o nome do host: %v", err)
-	}
-	if hostname == "" {
-		hostname = os.Getenv("INSTANCE_NAME")
-	}
-	return hostname
-}
-
-/**
-*  Define os limites da localização do servidor de acordo com seu nome.
-*  Os limites são configurados em pares de inteiros, que indicam a área em um grid.
-*  @param: nenhum
-*  @returns: nenhum
-*/
-func setServerLocation() {
-	switch serverName {
-	case "empresa-a":
-		serverLocation = []int{0, 250}
-	case "empresa-b":
-		serverLocation = []int{251, 500}
-	case "empresa-c":
-		serverLocation = []int{501, 750}
-	default:
-		serverLocation = []int{-1, -1}
-	}
-}
-
-/**
-*  Verifica se a posição atual do carro está dentro dos limites da empresa.
-*  @param:
-*     - carLocation ([]int): slice contendo as posições x, y, destX, destY do carro.
-*  @returns: 
-*     - (bool): true se a posição estiver dentro dos limites, false caso contrário.
-*/
-func isCarInCompanyLimits(carLocation []int) bool {
-	if len(carLocation) != 4 {
-		return false
-	}
-
-	x, y := carLocation[0], carLocation[1]
-	//destX, destY := carLocation[2], carLocation[3]
-
-	if x >= serverLocation[0] && x <= serverLocation[1] && y >= serverLocation[0] && y <= serverLocation[1] {
-		fmt.Println("🚗 O carro está dentro dos limites da empresa.")
-		return true
-		// if destX >= serverLocation[0] && destX <= serverLocation[1] && destY >= serverLocation[0] && destY <= serverLocation[1] {
-		// 	return true
-		// }
-	}
-	fmt.Println("🚗 O carro está fora dos limites da empresa.")
-	return false
-}
-
 // ======== MQTT ========
 /**
 *  Inicializa a conexão MQTT, define opções de conexão e se inscreve no tópico de posições de carro.
 *  @param: nenhum
 *  @returns: nenhum
-*/
+ */
 func initMQTT() {
 	opts := mqtt.NewClientOptions().
 		AddBroker("tcp://mosquitto:1883").
-		SetClientID("server-" + getHostname())
+		SetClientID("server-" + functions.GetHostname())
 
 	mqttClient = mqtt.NewClient(opts)
 
@@ -104,11 +42,11 @@ func initMQTT() {
 }
 
 /**
-*  Inscreve o servidor no tópico 'car/position' e define a função callback 
+*  Inscreve o servidor no tópico 'car/position' e define a função callback
 *  para processar as mensagens recebidas, verificando se o carro está nos limites.
 *  @param: nenhum
 *  @returns: nenhum
-*/
+ */
 func subscribeToCarPosition() {
 	if token := mqttClient.Subscribe("car/position", 0, func(client mqtt.Client, msg mqtt.Message) {
 		position := string(msg.Payload())
@@ -118,7 +56,7 @@ func subscribeToCarPosition() {
 		var x, y, destX, destY int
 		fmt.Sscanf(position, "%d, %d, %d, %d", &x, &y, &destX, &destY)
 		carRoute = []int{x, y, destX, destY}
-		isCarInCompanyLimits(carRoute)
+		functions.IsCarInCompanyLimits(carRoute, serverLocation)
 
 	}); token.Wait() && token.Error() != nil {
 		log.Fatalf("Erro ao se inscrever no tópico: %v", token.Error())
@@ -131,7 +69,7 @@ func subscribeToCarPosition() {
 *  Cria a rota '/server/position' para retornar a posição atual do servidor.
 *  @param: nenhum
 *  @returns: nenhum
-*/
+ */
 func startHTTPServer() {
 	router := gin.Default()
 
@@ -172,7 +110,7 @@ func startHTTPServer() {
 *  conecta ao broker MQTT e inicia o servidor HTTP.
 *  @param: nenhum
 *  @returns: nenhum
-*/
+ */
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
@@ -180,7 +118,7 @@ func main() {
 
 	fmt.Println("🚀 Servidor:", serverName)
 
-	setServerLocation()
+	functions.SetServerLocation(serverName, serverLocation)
 	fmt.Println("📍 Localização do servidor:", serverLocation)
 
 	initMQTT()
