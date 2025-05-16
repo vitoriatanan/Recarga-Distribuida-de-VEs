@@ -1,2 +1,5 @@
 COMANDO PARA EXECUTAR OS CONTAINERS:
 docker-compose up --build
+
+git config --global user.name "nathiellea"
+git config --global user.email "telly.cerq@gmail.com"
