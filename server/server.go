@@ -118,7 +118,7 @@ func main() {
 
 	fmt.Println("🚀 Servidor:", serverName)
 
-	functions.SetServerLocation(serverName, serverLocation)
+	serverLocation = functions.SetServerLocation(serverName, serverLocation)
 	fmt.Println("📍 Localização do servidor:", serverLocation)
 
 	initMQTT()
