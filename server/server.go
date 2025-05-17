@@ -56,7 +56,13 @@ func subscribeToCarPosition() {
 		var x, y, destX, destY int
 		fmt.Sscanf(position, "%d, %d, %d, %d", &x, &y, &destX, &destY)
 		carRoute = []int{x, y, destX, destY}
-		functions.IsCarInCompanyLimits(carRoute, serverLocation)
+
+		// Verifica se a localização de origem do carro está nos limites do servidor
+		if (functions.IsCarInCompanyLimits(carRoute, serverLocation)) {
+			// Reserva posto
+		} else {
+			functions.SendPositionToOtherServers(x, y int)
+		}
 
 	}); token.Wait() && token.Error() != nil {
 		log.Fatalf("Erro ao se inscrever no tópico: %v", token.Error())
@@ -80,28 +86,34 @@ func startHTTPServer() {
 		})
 	})
 
+	router.POST("/server/forward", func(c *gin.Context) {
+		var req struct {
+			X int `json:"x"`
+			Y int `json:"y"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
+			return
+		}
+	
+		fmt.Printf("📨 Coordenada recebida: (%d, %d)\n", req.X, req.Y)
+	
+		if functions.IsPositionInCompanyLimits(req.X, req.Y, serverLocation) {
+			fmt.Println("✅ Este servidor cobre a posição recebida. Pode atender o carro.")
+			// selecionar ponto de recarga ou destino
+		} else {
+			fmt.Println("🚫 Fora da área de cobertura deste servidor.")
+		}
+	
+		c.JSON(http.StatusOK, gin.H{"status": "recebido"})
+	})	
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	router.Run(":" + port)
 }
-
-// Função para enviar mensagens entre servidores pela API
-// func postLocation(serverName string, message string) {
-// 	url := fmt.Sprintf("http://%s:8080/server/position", serverName)
-// 	resp, err := http.Post(url, "application/json", nil)
-// 	if err != nil {
-// 		log.Fatalf("Erro ao enviar mensagem para %s: %v", serverName, err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != http.StatusOK {
-// 		log.Printf("Erro ao enviar mensagem para %s: %s", serverName, resp.Status)
-// 	} else {
-// 		fmt.Printf("✅ Mensagem enviada para %s: %s\n", serverName, message)
-// 	}
-// }
 
 // ======== FUNÇÃO PRINCIPAL ========
 /**

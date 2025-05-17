@@ -80,3 +80,30 @@ func IsCarInCompanyLimits(carLocation []int, serverLocation []int) bool {
 	fmt.Println("🚗 O carro está fora dos limites da empresa.")
 	return false
 }
+
+func SendPositionToOtherServers(x, y int) {
+	servers := []string{"empresa-a", "empresa-b", "empresa-c"}
+
+	for _, name := range servers {
+		if name == serverName {
+			continue
+		}
+
+		url := fmt.Sprintf("http://%s:8080/server/forward", name)
+		jsonStr := fmt.Sprintf(`{"x":%d, "y":%d}`, x, y)
+
+		resp, err := http.Post(url, "application/json", strings.NewReader(jsonStr))
+		if err != nil {
+			log.Printf("❌ Erro ao enviar para %s: %v\n", name, err)
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			fmt.Printf("📨 Posição (%d, %d) enviada para %s\n", x, y, name)
+		} else {
+			fmt.Printf("⚠️ Resposta do servidor %s: %s\n", name, resp.Status)
+		}
+	}
+}
+
