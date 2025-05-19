@@ -20,18 +20,18 @@ var serverLocation []int
 var carRoute []int
 var mqttClient mqtt.Client
 
-// ======== DICIOÁRIO DE POSTOS E SUAS RESERVA ========
-var stationsSpots = map[string]string{
-	"station1": "",
-	"station2": "",
-	"station3": "",
-	"station4": "",
-	"station5": "",
-	"station6": "",
-	"station7": "",
-	"station8": "",
-	"station9": "",
-	"station10": "",
+// ======== DICINOÁRIO DE POSTOS E SUAS RESERVA ========
+var stationsSpots = map[string]int{
+	"station1":  0,
+	"station2":  0,
+	"station3":  0,
+	"station4":  0,
+	"station5":  0,
+	"station6":  0,
+	"station7":  0,
+	"station8":  0,
+	"station9":  0,
+	"station10": 0,
 }
 
 // ======== MQTT ========
@@ -68,15 +68,25 @@ func subscribeToCarPosition() {
 
 		// Transformar a posição recebida de string para slice de inteiros
 		var origX, origY, destX, destY int
-		var carID string
-		fmt.Sscanf(position, "%s, %d, %d, %d, %d", &carID, &origX, &origY, &destX, &destY)
-		carRoute = []int{origX, origY, destX, destY}
+		var carID int
+		fmt.Sscanf(position, "%d, %d, %d, %d, %d", &carID, &origX, &origY, &destX, &destY)
+		// parts := strings.Split(position, ",")
+		// if len(parts) == 5 {
+		// 	carID = strings.TrimSpace(parts[0])
+		// 	origX, _ = strconv.Atoi(strings.TrimSpace(parts[1]))
+		// 	origY, _ = strconv.Atoi(strings.TrimSpace(parts[2]))
+		// 	destX, _ = strconv.Atoi(strings.TrimSpace(parts[3]))
+		// 	destY, _ = strconv.Atoi(strings.TrimSpace(parts[4]))
+		// }
+
+		carRoute = []int{carID, origX, origY, destX, destY}
+		//fmt.Printf("%d, %d, %d, %d, %d", carID, origX, origY, destX, destY)
 
 		// Verifica se a localização de origem do carro está nos limites do servidor
-		if (functions.IsPositionInCompanyLimits(origX, origY, serverLocation)) {
+		if functions.IsPositionInCompanyLimits(origX, origY, serverLocation) {
 
 			// Se a posição estiver dentro dos limites, envia para o tópico de recarga !!!!!!!!!!!!! FAZER ISSO
-			
+
 			fmt.Println("✅ Este servidor cobre a posição de origem recebida. Pode atender o carro.")
 
 			//Procura um ponto de recarga disponível e reserva
@@ -85,7 +95,7 @@ func subscribeToCarPosition() {
 			fmt.Printf("🚗 Primeiro ponto de recarga reservado na %s\n", first_station)
 
 			//Verifica se a posição de destino do carro está nos limites do servidor
-			if (functions.IsPositionInCompanyLimits(destX, destY, serverLocation)) {
+			if functions.IsPositionInCompanyLimits(destX, destY, serverLocation) {
 				fmt.Println("✅ Este servidor cobre a posição de destino recebida. Pode atender o carro.")
 
 				//Procura um ponto de recarga disponível e reserva
@@ -95,11 +105,11 @@ func subscribeToCarPosition() {
 
 			} else {
 				fmt.Println("🚫 Destino da viajem fora da área de cobertura deste servidor.")
-				
+
 				// Envia localização de destino do carro para os outros servidores
 				functions.SendPositionToServers(destX, destY, serverName)
 			}
-			
+
 		} else {
 			fmt.Println("🚫 Origem da viajem fora da área de cobertura deste servidor.")
 		}
@@ -121,8 +131,8 @@ func startHTTPServer() {
 	router.GET("/server/position", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"Min_x": serverLocation[0],
-			"Min_y": serverLocation[1],
-			"Max_x": serverLocation[2],
+			"Max_x": serverLocation[1],
+			"Min_y": serverLocation[2],
 			"Max_y": serverLocation[3],
 		})
 	})
@@ -163,19 +173,24 @@ func startHTTPServer() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
 			return
 		}
-	
+
 		fmt.Printf("📨 Coordenada recebida: (%d, %d)\n", req.X, req.Y)
-	
+
 		if functions.IsPositionInCompanyLimits(req.X, req.Y, serverLocation) {
 			fmt.Println("✅ Este servidor cobre a posição recebida. Pode atender o carro.")
-			// selecionar ponto de recarga
+
+			// Reservar ponto de recarga
+			station := functions.StationReservation(carRoute[0], stationsSpots)
+
+			stationsSpots[station] = carRoute[0]
+			fmt.Printf("🚗 Segundo ponto de recarga reservado na %s\n", station)
 
 		} else {
 			fmt.Println("🚫 Fora da área de cobertura deste servidor.")
 		}
-	
+
 		c.JSON(http.StatusOK, gin.H{"status": "recebido"})
-	})	
+	})
 
 	port := os.Getenv("PORT")
 	if port == "" {

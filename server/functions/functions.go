@@ -3,12 +3,12 @@ package functions
 import (
 	"fmt"
 	"log"
+
 	// "math/rand"
 	"net/http"
 	"os"
 	"strings"
 	// "time"
-
 	//mqtt "github.com/eclipse/paho.mqtt.golang"
 	//"github.com/gin-gonic/gin"
 )
@@ -65,25 +65,20 @@ func SetServerLocation(serverName string, serverLocation []int) []int {
 *  @returns:
 *     - (bool): true se a posição estiver dentro dos limites, false caso contrário.
  */
-func IsPositionInCompanyLimits(origX, origY int, serverLocation []int) bool {
-	//x, y := carLocation[0], carLocation[1]
-	//destX, destY := carLocation[2], carLocation[3]
+func IsPositionInCompanyLimits(x, y int, serverLocation []int) bool {
 
-	if origX >= serverLocation[0] && origX <= serverLocation[1] && origY >= serverLocation[2] && origY <= serverLocation[3] {
+	if (x >= serverLocation[0] && x <= serverLocation[1]) && (y >= serverLocation[2] && y <= serverLocation[3]) {
 		fmt.Println("🚗 O carro está dentro dos limites da empresa.")
 		return true
-		// if destX >= serverLocation[0] && destX <= serverLocation[1] && destY >= serverLocation[0] && destY <= serverLocation[1] {
-		// 	return true
-		// }
 	}
 	fmt.Println("🚗 O carro está fora dos limites da empresa.")
 	return false
 }
 
-func StationReservation(carID string, stationsSpots map[string]string) string{
+func StationReservation(carID int, stationsSpots map[string]int) string {
 	//Procura um ponto de recarga disponível e reserva
 	for station, reservation := range stationsSpots {
-		if reservation == "" {
+		if reservation == 0 {
 			stationsSpots[station] = carID
 			return station
 		}
@@ -98,7 +93,7 @@ func SendPositionToServers(x, y int, serverName string) {
 	for i := range servers {
 		name := servers[i]
 		ip := servers_ip[i]
-		
+
 		// Verifica se o servidor atual é o mesmo que o servidor local, ou seja, não envia a posição para si mesmo
 		if name == serverName {
 			continue
@@ -121,4 +116,3 @@ func SendPositionToServers(x, y int, serverName string) {
 		}
 	}
 }
-
