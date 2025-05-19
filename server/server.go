@@ -20,6 +20,20 @@ var serverLocation []int
 var carRoute []int
 var mqttClient mqtt.Client
 
+// ======== DICIOÁRIO DE POSTOS E SUAS RESERVA ========
+var stationsSpots = map[string]string{
+	"station1": "",
+	"station2": "",
+	"station3": "",
+	"station4": "",
+	"station5": "",
+	"station6": "",
+	"station7": "",
+	"station8": "",
+	"station9": "",
+	"station10": "",
+}
+
 // ======== MQTT ========
 /**
 *  Inicializa a conexão MQTT, define opções de conexão e se inscreve no tópico de posições de carro.
@@ -54,14 +68,35 @@ func subscribeToCarPosition() {
 
 		// Transformar a posição recebida de string para slice de inteiros
 		var origX, origY, destX, destY int
-		fmt.Sscanf(position, "%d, %d, %d, %d", &origX, &origY, &destX, &destY)
+		var carID string
+		fmt.Sscanf(position, "%s, %d, %d, %d, %d", &carID, &origX, &origY, &destX, &destY)
 		carRoute = []int{origX, origY, destX, destY}
 
 		// Verifica se a localização de origem do carro está nos limites do servidor
 		if (functions.IsPositionInCompanyLimits(origX, origY, serverLocation)) {
-			// Reserva posto
-		} else {
-			functions.SendPositionToServers(origX, origY, serverName)
+
+			// Se a posição estiver dentro dos limites, envia para o tópico de recarga !!!!!!!!!!!!! FAZER ISSO
+			
+			fmt.Println("✅ Este servidor cobre a posição de origem recebida. Pode atender o carro.")
+
+			//Procura um ponto de recarga disponível e reserva
+			first_station := StationReservation(carID, stationsSpots)
+			stationsSpots[first_station] = carID
+			fmt.Printf("🚗 Primeiro ponto de recarga reservado na %s\n", first_station)
+
+			//Verifica se a posição de destino do carro está nos limites do servidor
+			if (functions.IsPositionInCompanyLimits(destX, destY, serverLocation)) {
+				fmt.Println("✅ Este servidor cobre a posição de destino recebida. Pode atender o carro.")
+
+				//Procura um ponto de recarga disponível e reserva
+				second_station := StationReservation(carID, stationsSpots)
+				stationsSpots[second_station] = carID
+				fmt.Printf("🚗 Segundo ponto de recarga reservado na %s\n", second_station)
+
+			} else {
+				fmt.Println("🚫 Destino da viajem fora da área de cobertura deste servidor.")
+			}
+			
 		}
 
 	}); token.Wait() && token.Error() != nil {
@@ -80,9 +115,38 @@ func startHTTPServer() {
 
 	router.GET("/server/position", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"x": serverLocation[0],
-			"y": serverLocation[1],
+			"Min_x": serverLocation[0],
+			"Min_y": serverLocation[1],
+			"Max_x": serverLocation[2],
+			"Max_y": serverLocation[3],
 		})
+	})
+
+	router.GET("/server/route", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"origX": carRoute[0],
+			"origY": carRoute[1],
+			"destX": carRoute[2],
+			"destY": carRoute[3],
+		})
+	})
+
+	router.GET("/server/stations", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"stationsSpots": stationsSpots,
+		})
+	})
+
+	router.GET("/server/stations/:station", func(c *gin.Context) {
+		station := c.Param("station")
+		if spots, ok := stationsSpots[station]; ok {
+			c.JSON(http.StatusOK, gin.H{
+				"station": station,
+				"spots":   spots,
+			})
+		} else {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Estação não encontrada"})
+		}
 	})
 
 	router.POST("/server/forward", func(c *gin.Context) {
@@ -99,7 +163,8 @@ func startHTTPServer() {
 	
 		if functions.IsPositionInCompanyLimits(req.X, req.Y, serverLocation) {
 			fmt.Println("✅ Este servidor cobre a posição recebida. Pode atender o carro.")
-			// selecionar ponto de recarga ou destino
+			// selecionar ponto de recarga
+
 		} else {
 			fmt.Println("🚫 Fora da área de cobertura deste servidor.")
 		}

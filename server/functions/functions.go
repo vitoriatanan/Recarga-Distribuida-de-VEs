@@ -41,13 +41,16 @@ func GetHostname() string {
 func SetServerLocation(serverName string, serverLocation []int) []int {
 	switch serverName {
 	case "empresa-a":
-		serverLocation = []int{0, 250}
+		serverLocation = []int{0, 500, 0, 500}
 		return serverLocation
 	case "empresa-b":
-		serverLocation = []int{251, 500}
+		serverLocation = []int{0, 500, 501, 1000}
 		return serverLocation
 	case "empresa-c":
-		serverLocation = []int{501, 750}
+		serverLocation = []int{501, 1000, 0, 500}
+		return serverLocation
+	case "empresa-d":
+		serverLocation = []int{501, 1000, 501, 1000}
 		return serverLocation
 	default:
 		serverLocation = []int{-1, -1}
@@ -66,7 +69,7 @@ func IsPositionInCompanyLimits(origX, origY int, serverLocation []int) bool {
 	//x, y := carLocation[0], carLocation[1]
 	//destX, destY := carLocation[2], carLocation[3]
 
-	if origX >= serverLocation[0] && origX <= serverLocation[1] && origY >= serverLocation[0] && origY <= serverLocation[1] {
+	if origX >= serverLocation[0] && origX <= serverLocation[1] && origY >= serverLocation[2] && origY <= serverLocation[3] {
 		fmt.Println("🚗 O carro está dentro dos limites da empresa.")
 		return true
 		// if destX >= serverLocation[0] && destX <= serverLocation[1] && destY >= serverLocation[0] && destY <= serverLocation[1] {
@@ -77,9 +80,19 @@ func IsPositionInCompanyLimits(origX, origY int, serverLocation []int) bool {
 	return false
 }
 
+func StationReservation(carID string, stationsSpots map[string]string) string{
+	//Procura um ponto de recarga disponível e reserva
+	for station, reservation := range stationsSpots {
+		if reservation == "" {
+			stationsSpots[station] = carID
+			return station
+		}
+	}
+}
+
 func SendPositionToServers(x, y int, serverName string) {
-	servers_ip := []string{"8081", "8082", "8083"}
-	servers := []string{"empresa-a", "empresa-b", "empresa-c"}
+	servers_ip := []string{"8081", "8082", "8083", "8084"}
+	servers := []string{"empresa-a", "empresa-b", "empresa-c", "empresa-d"}
 
 	for i := range servers {
 		name := servers[i]

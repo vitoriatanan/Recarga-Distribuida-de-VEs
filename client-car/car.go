@@ -136,7 +136,7 @@ func generatePosition() (int, int, int, int) {
 func startCarLoop(client mqtt.Client) {
 	for {
 		origX, origY, destX, destY := generatePosition()
-		route := fmt.Sprintf("%d, %d, %d, %d", origX, origY, destX, destY)
+		route := fmt.Sprintf("%s, %d, %d, %d, %d", clientID, origX, origY, destX, destY)
 
 		// Envia para ambos os tópicos
 		publish(client, "car/position", route)
@@ -145,7 +145,7 @@ func startCarLoop(client mqtt.Client) {
 		publish(client, "car/recarga", route)
 		fmt.Println("📤 Enviado para car/recarga:", route)
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
 
