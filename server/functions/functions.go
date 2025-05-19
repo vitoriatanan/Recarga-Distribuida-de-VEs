@@ -88,6 +88,7 @@ func StationReservation(carID string, stationsSpots map[string]string) string{
 			return station
 		}
 	}
+	return ""
 }
 
 func SendPositionToServers(x, y int, serverName string) {

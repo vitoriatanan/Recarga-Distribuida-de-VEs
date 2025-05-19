@@ -80,7 +80,7 @@ func subscribeToCarPosition() {
 			fmt.Println("✅ Este servidor cobre a posição de origem recebida. Pode atender o carro.")
 
 			//Procura um ponto de recarga disponível e reserva
-			first_station := StationReservation(carID, stationsSpots)
+			first_station := functions.StationReservation(carID, stationsSpots)
 			stationsSpots[first_station] = carID
 			fmt.Printf("🚗 Primeiro ponto de recarga reservado na %s\n", first_station)
 
@@ -89,7 +89,7 @@ func subscribeToCarPosition() {
 				fmt.Println("✅ Este servidor cobre a posição de destino recebida. Pode atender o carro.")
 
 				//Procura um ponto de recarga disponível e reserva
-				second_station := StationReservation(carID, stationsSpots)
+				second_station := functions.StationReservation(carID, stationsSpots)
 				stationsSpots[second_station] = carID
 				fmt.Printf("🚗 Segundo ponto de recarga reservado na %s\n", second_station)
 
