@@ -104,14 +104,14 @@ func subscribeToCarPosition() {
 				fmt.Printf("🚗 Segundo ponto de recarga reservado na %s\n", second_station)
 
 			} else {
-				fmt.Println("🚫 Destino da viajem fora da área de cobertura deste servidor.")
+				fmt.Println("🚫 Destino da viagem fora da área de cobertura deste servidor.")
 
 				// Envia localização de destino do carro para os outros servidores
 				functions.SendPositionToServers(destX, destY, serverName)
 			}
 
 		} else {
-			fmt.Println("🚫 Origem da viajem fora da área de cobertura deste servidor.")
+			fmt.Println("🚫 Origem da viagem fora da área de cobertura deste servidor.")
 		}
 
 	}); token.Wait() && token.Error() != nil {
