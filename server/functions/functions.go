@@ -3,10 +3,10 @@ package functions
 import (
 	"fmt"
 	"log"
-
 	// "math/rand"
-	// "net/http"
+	"net/http"
 	"os"
+	"strings"
 	// "time"
 
 	//mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -62,15 +62,11 @@ func SetServerLocation(serverName string, serverLocation []int) []int {
 *  @returns:
 *     - (bool): true se a posição estiver dentro dos limites, false caso contrário.
  */
-func IsCarInCompanyLimits(carLocation []int, serverLocation []int) bool {
-	if len(carLocation) != 4 {
-		return false
-	}
-
-	x, y := carLocation[0], carLocation[1]
+func IsPositionInCompanyLimits(origX, origY int, serverLocation []int) bool {
+	//x, y := carLocation[0], carLocation[1]
 	//destX, destY := carLocation[2], carLocation[3]
 
-	if x >= serverLocation[0] && x <= serverLocation[1] && y >= serverLocation[0] && y <= serverLocation[1] {
+	if origX >= serverLocation[0] && origX <= serverLocation[1] && origY >= serverLocation[0] && origY <= serverLocation[1] {
 		fmt.Println("🚗 O carro está dentro dos limites da empresa.")
 		return true
 		// if destX >= serverLocation[0] && destX <= serverLocation[1] && destY >= serverLocation[0] && destY <= serverLocation[1] {
@@ -81,15 +77,20 @@ func IsCarInCompanyLimits(carLocation []int, serverLocation []int) bool {
 	return false
 }
 
-func SendPositionToOtherServers(x, y int) {
+func SendPositionToServers(x, y int, serverName string) {
+	servers_ip := []string{"8081", "8082", "8083"}
 	servers := []string{"empresa-a", "empresa-b", "empresa-c"}
 
-	for _, name := range servers {
+	for i := range servers {
+		name := servers[i]
+		ip := servers_ip[i]
+		
+		// Verifica se o servidor atual é o mesmo que o servidor local, ou seja, não envia a posição para si mesmo
 		if name == serverName {
 			continue
 		}
 
-		url := fmt.Sprintf("http://%s:8080/server/forward", name)
+		url := fmt.Sprintf("http://%s:%s/server/forward", name, ip)
 		jsonStr := fmt.Sprintf(`{"x":%d, "y":%d}`, x, y)
 
 		resp, err := http.Post(url, "application/json", strings.NewReader(jsonStr))

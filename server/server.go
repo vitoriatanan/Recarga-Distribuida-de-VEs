@@ -53,15 +53,15 @@ func subscribeToCarPosition() {
 		fmt.Println("📥 Posição recebida do carro:", position)
 
 		// Transformar a posição recebida de string para slice de inteiros
-		var x, y, destX, destY int
-		fmt.Sscanf(position, "%d, %d, %d, %d", &x, &y, &destX, &destY)
-		carRoute = []int{x, y, destX, destY}
+		var origX, origY, destX, destY int
+		fmt.Sscanf(position, "%d, %d, %d, %d", &origX, &origY, &destX, &destY)
+		carRoute = []int{origX, origY, destX, destY}
 
 		// Verifica se a localização de origem do carro está nos limites do servidor
-		if (functions.IsCarInCompanyLimits(carRoute, serverLocation)) {
+		if (functions.IsPositionInCompanyLimits(origX, origY, serverLocation)) {
 			// Reserva posto
 		} else {
-			functions.SendPositionToOtherServers(x, y int)
+			functions.SendPositionToServers(origX, origY, serverName)
 		}
 
 	}); token.Wait() && token.Error() != nil {
@@ -72,7 +72,6 @@ func subscribeToCarPosition() {
 // ======== HTTP Server ========
 /**
 *  Inicia o servidor HTTP usando o framework Gin.
-*  Cria a rota '/server/position' para retornar a posição atual do servidor.
 *  @param: nenhum
 *  @returns: nenhum
  */
