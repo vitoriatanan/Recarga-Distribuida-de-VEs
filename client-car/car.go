@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -15,29 +16,7 @@ const (
 
 var clientID int
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
-
-	// Gera um ID único para o carro
-	clientID = rand.Intn(1000)
-	id := fmt.Sprintf("%d", clientID)
-
-	client := connectMQTT(brokerURL, id)
-	defer disconnectMQTT(client)
-
-	subscribe(client, "car/recarga", defaultMessageHandler)
-	startCarLoop(client)
-}
-
-
-/**
-*  Realiza a conexão de um cliente MQTT ao broker especificado.
-*  @param: 
-*     - broker (string): URL do broker MQTT.
-*     - clientID (string): Identificador único do cliente.
-*  @returns: 
-*     - mqtt.Client: cliente MQTT conectado ao broker.
-*/
+// Conecta ao broker MQTT
 func connectMQTT(broker, clientID string) mqtt.Client {
 	opts := mqtt.NewClientOptions().
 		AddBroker(broker).
@@ -54,44 +33,24 @@ func connectMQTT(broker, clientID string) mqtt.Client {
 	return client
 }
 
-/**
-*  Desconecta o cliente MQTT do broker.
-*  @param: 
-*     - client (mqtt.Client): cliente MQTT a ser desconectado.
-*  @returns: nenhum
-*/
+// Desconecta do broker MQTT
 func disconnectMQTT(client mqtt.Client) {
 	client.Disconnect(250)
 	fmt.Println("🚪 Cliente desconectado.")
 }
 
-
-/**
-*  Publica uma mensagem em um tópico MQTT.
-*  @param: 
-*     - client (mqtt.Client): cliente MQTT utilizado para publicar.
-*     - topic (string): nome do tópico MQTT.
-*     - payload (string): conteúdo da mensagem a ser enviada.
-*  @returns: nenhum
-*/
+// Publica uma mensagem em um tópico MQTT
 func publish(client mqtt.Client, topic string, payload string) {
 	token := client.Publish(topic, 0, false, payload)
 	token.Wait()
 	if err := token.Error(); err != nil {
 		log.Printf("⚠️ Erro ao publicar no tópico %s: %v", topic, err)
+		return
 	}
 	fmt.Printf("📄 Publicado no tópico %s\n", topic)
 }
 
-
-/**
-*  Inscreve o cliente em um tópico MQTT para receber mensagens.
-*  @param: 
-*     - client (mqtt.Client): cliente MQTT que fará a inscrição.
-*     - topic (string): tópico no qual o cliente se inscreverá.
-*     - callback (mqtt.MessageHandler): função que será executada ao receber mensagens.
-*  @returns: nenhum
-*/
+// Inscreve em um tópico MQTT
 func subscribe(client mqtt.Client, topic string, callback mqtt.MessageHandler) {
 	token := client.Subscribe(topic, 0, callback)
 	token.Wait()
@@ -101,25 +60,17 @@ func subscribe(client mqtt.Client, topic string, callback mqtt.MessageHandler) {
 	fmt.Printf("📡 Inscrito no tópico %s\n", topic)
 }
 
-/**
-*  Função callback padrão para lidar com mensagens recebidas.
-*  @param: 
-*     - client (mqtt.Client): cliente MQTT que recebeu a mensagem.
-*     - msg (mqtt.Message): mensagem MQTT recebida.
-*  @returns: nenhum
-*/
+// Tratador padrão de mensagens MQTT recebidas
 func defaultMessageHandler(client mqtt.Client, msg mqtt.Message) {
 	fmt.Printf("📩 Mensagem recebida [%s]: %s\n", msg.Topic(), msg.Payload())
 }
 
+// Um callback para tratar a resposta
+func reservationHandler(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("✅ Confirmação de reserva recebida para o carro %d: %s\n", clientID, string(msg.Payload()))
+}
 
-/**
-*  Responsável por gerar coordenadas aleatórias de origem e destino para o carro.
-*  @param: nenhum
-*  @returns: 
-*     - (int, int, int, int): coordenadas de origem (originX, originY)
-*       e destino (destinationX, destinationY), todas variando de 0 a 999.
-*/
+// Gera uma posição aleatória simulada
 func generatePosition() (int, int, int, int) {
 
 	originX := rand.Intn(1000)      // coordenada X entre 0 e 999
@@ -130,14 +81,7 @@ func generatePosition() (int, int, int, int) {
 	return originX, originY, destinationX, destinationY
 }
 
-/**
-*  Inicia o loop de envio de posições do carro.
-*  A cada 2 segundos, gera coordenadas de origem e destino,
-*  e publica nos tópicos 'car/position' e 'car/recarga'.
-*  @param: 
-*     - client (mqtt.Client): cliente MQTT usado para enviar as mensagens.
-*  @returns: nenhum
-*/
+// Loop que simula a movimentação do carro publicando posição periodicamente
 func startCarLoop(client mqtt.Client) {
 	for {
 		origX, origY, destX, destY := generatePosition()
@@ -154,54 +98,20 @@ func startCarLoop(client mqtt.Client) {
 	}
 }
 
-// package main
+// Função principal
+func main() {
+	rand.Seed(time.Now().UnixNano())
 
-// import (
-// 	"fmt"
-// 	"log"
-// 	"math/rand"
-// 	"time"
+	// Gera um ID único para o carro
+	clientID = rand.Intn(1000)
+	id := fmt.Sprintf("%d", clientID)
 
-// 	mqtt "github.com/eclipse/paho.mqtt.golang"
-// )
+	client := connectMQTT(brokerURL, id)
+	defer disconnectMQTT(client)
 
-// func main() {
-// 	// Semente para gerar posições diferentes
-// 	rand.Seed(time.Now().UnixNano())
+	subscribe(client, "car/recarga", defaultMessageHandler)
+	reservationTopic := fmt.Sprintf("car/%d/reservation", clientID)
+	subscribe(client, reservationTopic, reservationHandler)
 
-// 	// Criando um novo cliente MQTT
-// 	opts := mqtt.NewClientOptions().AddBroker("tcp://mosquitto:1883").SetClientID("car")
-// 	client := mqtt.NewClient(opts)
-
-// 	// Conecta ao broker MQTT
-// 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-// 		log.Fatalf("Erro de conexão MQTT: %v", token.Error())
-// 	}
-
-// 	fmt.Println("✅ Carro conectado ao broker MQTT!")
-
-// 	defer client.Disconnect(250)
-
-// 	// Gera coordenadas aleatórias e envia para o tópico car/position
-// 	for {
-
-// 		// Gera coordenadas aleatórias de inicio e destino da rota
-// 		x_begin := rand.Intn(1000) // coordenada X entre 0 e 999
-// 		y_begin := rand.Intn(1000) // coordenada Y entre 0 e 999
-
-// 		x_end := rand.Intn(1000) // coordenada X entre 0 e 999
-// 		y_end := rand.Intn(1000) // coordenada Y entre 0 e 999
-
-// 		position := fmt.Sprintf("Carro - saída: (%d, %d) chegada: (%d, %d)", x_begin, y_begin, x_end, y_end) // cria a string com as coordenadas
-
-// 		//car_route := route_generator()      // gera uma rota aleatória para o carro
-// 		//fmt.Println(" - Rota: ", car_route) // adiciona a rota ao vetor de posições
-
-// 		token := client.Publish("car/position", 0, false, position) // publica a posição no tópico car/position
-
-// 		token.Wait()
-
-// 		fmt.Println("📤 Enviado:", position)
-// 		time.Sleep(2 * time.Second)
-// 	}
-// }
+	startCarLoop(client)
+}
