@@ -34,6 +34,20 @@ var stationsSpots = map[string]int{
 	"station10": 0,
 }
 
+// Notifica o carro
+func notifyCarReservation(carID int, firstStation, secondStation string) {
+	topic := fmt.Sprintf("car/%d/reservation", carID)
+	message := fmt.Sprintf("Reserva confirmada: %s e %s", firstStation, secondStation)
+
+	token := mqttClient.Publish(topic, 0, false, message)
+	token.Wait()
+	if token.Error() != nil {
+		log.Printf("Erro ao notificar carro %d: %v\n", carID, token.Error())
+	} else {
+		fmt.Printf("📤 Notificação enviada para carro %d no tópico %s\n", carID, topic)
+	}
+}
+
 // ======== MQTT ========
 /**
 *  Inicializa a conexão MQTT, define opções de conexão e se inscreve no tópico de posições de carro.
@@ -103,15 +117,19 @@ func subscribeToCarPosition() {
 				stationsSpots[second_station] = carID
 				fmt.Printf("🚗 Segundo ponto de recarga reservado na %s\n", second_station)
 
+				//	AVISE AO CARRO
+				notifyCarReservation(carID, first_station, second_station)
+
 			} else {
-				fmt.Println("🚫 Destino da viagem fora da área de cobertura deste servidor.")
+				fmt.Println("🚫 Destino da viajem fora da área de cobertura deste servidor.")
 
 				// Envia localização de destino do carro para os outros servidores
 				functions.SendPositionToServers(destX, destY, serverName)
+
 			}
 
 		} else {
-			fmt.Println("🚫 Origem da viagem fora da área de cobertura deste servidor.")
+			fmt.Println("🚫 Origem da viajem fora da área de cobertura deste servidor.")
 		}
 
 	}); token.Wait() && token.Error() != nil {
