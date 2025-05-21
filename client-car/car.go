@@ -9,54 +9,150 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var all_cities = []string{"São Paulo", "Rio de Janeiro", "Belo Horizonte", "Salvador", "Curitiba"} // cidades disponíveis para os carros
+const (
+	brokerURL = "tcp://mosquitto:1883" // URL do broker MQTT
+)
 
-/*GERA ROTAS ALEATÓRIAS PARA OS CARROS*/
-func route_generator() []string {
-	numberOfCities := rand.Intn(4) + 2      // número de cidades entre 2 e 5
-	route := make([]string, numberOfCities) // vetor de rotas com o número de cidades
+var clientID int // ID único do cliente (carro), gerado aleatoriamente
 
-	for i := 0; i < numberOfCities; i++ {
-		// Adiciona cidades aleatórias ao vetor de rotas
-		randon_city := rand.Intn(len(all_cities)) // número aleatório entre 0 e o número de cidades disponíveis
-		route[i] = all_cities[randon_city]        // número aleatório entre 0 e o número de cidades disponíveis
-	}
+/**
+ * Conecta ao broker MQTT utilizando o endereço e o ID fornecidos.
+ *
+ * @param broker  o endereço do broker MQTT
+ * @param clientID o ID do cliente
+ * @return mqtt.Client o cliente MQTT conectado
+ */
+func connectMQTT(broker, clientID string) mqtt.Client {
+	opts := mqtt.NewClientOptions().
+		AddBroker(broker).
+		SetClientID(clientID).
+		SetDefaultPublishHandler(defaultMessageHandler)
 
-	return route // retorna o vetor de rotas
-}
-
-func main() {
-	// Semente para gerar posições diferentes
-	rand.Seed(time.Now().UnixNano())
-
-	// Criando um novo cliente MQTT
-	opts := mqtt.NewClientOptions().AddBroker("tcp://mosquitto:1883").SetClientID("car")
 	client := mqtt.NewClient(opts)
 
-	// Conecta ao broker MQTT
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		log.Fatalf("Erro de conexão MQTT: %v", token.Error())
+		log.Fatalf("❌ Erro ao conectar ao broker: %v", token.Error())
 	}
 
-	fmt.Println("✅ Carro conectado ao broker MQTT!")
+	fmt.Println("✅ Conectado ao broker MQTT!")
+	return client
+}
 
-	defer client.Disconnect(250)
+/**
+ * Desconecta o cliente MQTT do broker.
+ *
+ * @param client o cliente MQTT a ser desconectado
+ */
+func disconnectMQTT(client mqtt.Client) {
+	client.Disconnect(250)
+	fmt.Println("🚪 Cliente desconectado.")
+}
 
-	// Gera coordenadas aleatórias e envia para o tópico car/position
+/**
+ * Publica uma mensagem em um tópico MQTT com QoS 0.
+ *
+ * @param client  o cliente MQTT
+ * @param topic   o tópico para onde publicar
+ * @param payload o conteúdo da mensagem
+ */
+func publish(client mqtt.Client, topic string, payload string) {
+	token := client.Publish(topic, 0, false, payload)
+	token.Wait()
+	if err := token.Error(); err != nil {
+		log.Printf("⚠️ Erro ao publicar no tópico %s: %v", topic, err)
+		return
+	}
+	fmt.Printf("📄 Publicado no tópico %s\n", topic)
+}
+
+/**
+ * Inscreve o cliente em um tópico MQTT, associando um handler de mensagens.
+ *
+ * @param client   o cliente MQTT
+ * @param topic    o tópico a se inscrever
+ * @param callback o handler para mensagens recebidas
+ */
+func subscribe(client mqtt.Client, topic string, callback mqtt.MessageHandler) {
+	token := client.Subscribe(topic, 0, callback)
+	token.Wait()
+	if err := token.Error(); err != nil {
+		log.Fatalf("❌ Erro ao se inscrever no tópico %s: %v", topic, err)
+	}
+	fmt.Printf("📡 Inscrito no tópico %s\n", topic)
+}
+
+/**
+ * Handler padrão para mensagens recebidas via MQTT.
+ *
+ * @param client o cliente MQTT
+ * @param msg    a mensagem recebida
+ */
+func defaultMessageHandler(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("📩 Mensagem recebida [%s]: %s\n", msg.Topic(), msg.Payload())
+}
+
+/**
+ * Handler específico para mensagens de confirmação de reserva.
+ *
+ * @param client o cliente MQTT
+ * @param msg    a mensagem de confirmação
+ */
+func reservationHandler(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("✅ Confirmação de reserva recebida para o carro %d: %s\n", clientID, string(msg.Payload()))
+}
+
+/**
+ * Gera uma posição aleatória com coordenadas de origem e destino.
+ *
+ * @return quatro inteiros representando originX, originY, destinationX, destinationY
+ */
+func generatePosition() (int, int, int, int) {
+	originX := rand.Intn(1000)
+	originY := rand.Intn(1000)
+	destinationX := rand.Intn(1000)
+	destinationY := rand.Intn(1000)
+
+	return originX, originY, destinationX, destinationY
+}
+
+/**
+ * Inicia o loop de simulação do carro.
+ * Publica coordenadas aleatórias de posição e destino nos tópicos apropriados a cada 2 segundos.
+ *
+ * @param client o cliente MQTT
+ */
+func startCarLoop(client mqtt.Client) {
 	for {
-		x := rand.Intn(1000) // coordenada X entre 0 e 999
-		y := rand.Intn(1000) // coordenada Y entre 0 e 999
+		origX, origY, destX, destY := generatePosition()
+		route := fmt.Sprintf("%d, %d, %d, %d, %d", clientID, origX, origY, destX, destY)
 
-		position := fmt.Sprintf("Carro A - posição x:%d, y:%d", x, y)
+		publish(client, "car/position", route)
+		fmt.Println("📤 Enviado para car/position:", route)
 
-		car_route := route_generator()        // gera uma rota aleatória para o carro
-		fmt.Sprintf(" - Rota: %v", car_route) // adiciona a rota ao vetor de posições
+		publish(client, "car/recarga", route)
+		fmt.Println("📤 Enviado para car/recarga:", route)
 
-		token := client.Publish("car/position", 0, false, position)
-
-		token.Wait()
-
-		fmt.Println("📤 Enviado:", position)
 		time.Sleep(2 * time.Second)
 	}
+}
+
+/**
+ * Função principal da aplicação.
+ * Gera um ID aleatório para o carro, conecta ao broker MQTT, se inscreve nos tópicos necessários
+ * e inicia a simulação de movimentação do carro.
+ */
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	clientID = rand.Intn(1000)
+	id := fmt.Sprintf("%d", clientID)
+
+	client := connectMQTT(brokerURL, id)
+	defer disconnectMQTT(client)
+
+	subscribe(client, "car/recarga", defaultMessageHandler)
+	reservationTopic := fmt.Sprintf("car/%d/reservation", clientID)
+	subscribe(client, reservationTopic, reservationHandler)
+
+	startCarLoop(client)
 }
