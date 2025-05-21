@@ -3,23 +3,17 @@ package functions
 import (
 	"fmt"
 	"log"
-
-	// "math/rand"
 	"net/http"
 	"os"
 	"strings"
-	// "time"
-	//mqtt "github.com/eclipse/paho.mqtt.golang"
-	//"github.com/gin-gonic/gin"
 )
 
 // ======== FUNÇÕES UTILITÁRIAS ========
 
 /**
-*  Obtém o nome do host atual da máquina ou da variável de ambiente INSTANCE_NAME.
-*  @param: nenhum
-*  @returns:
-*     - (string): nome do host ou da instância.
+ * Obtém o nome do host atual da máquina ou da variável de ambiente INSTANCE_NAME.
+ *
+ * @return string nome do host ou da instância.
  */
 func GetHostname() string {
 	hostname, err := os.Hostname()
@@ -33,40 +27,38 @@ func GetHostname() string {
 }
 
 /**
-*  Define os limites da localização do servidor de acordo com seu nome.
-*  Os limites são configurados em pares de inteiros, que indicam a área em um grid.
-*  @param: nenhum
-*  @returns: nenhum
+ * Define os limites da localização do servidor com base no nome da empresa.
+ * Os limites são representados por um slice com os valores [xMin, xMax, yMin, yMax].
+ *
+ * @param serverName nome do servidor (empresa-a, empresa-b, etc.)
+ * @param serverLocation slice que será sobrescrito com os novos limites
+ * @return []int limites da área do servidor
  */
 func SetServerLocation(serverName string, serverLocation []int) []int {
 	switch serverName {
 	case "empresa-a":
 		serverLocation = []int{0, 500, 0, 500}
-		return serverLocation
 	case "empresa-b":
 		serverLocation = []int{0, 500, 501, 1000}
-		return serverLocation
 	case "empresa-c":
 		serverLocation = []int{501, 1000, 0, 500}
-		return serverLocation
 	case "empresa-d":
 		serverLocation = []int{501, 1000, 501, 1000}
-		return serverLocation
 	default:
 		serverLocation = []int{-1, -1}
-		return serverLocation
 	}
+	return serverLocation
 }
 
 /**
-*  Verifica se a posição atual do carro está dentro dos limites da empresa.
-*  @param:
-*     - carLocation ([]int): slice contendo as posições x, y, destX, destY do carro.
-*  @returns:
-*     - (bool): true se a posição estiver dentro dos limites, false caso contrário.
+ * Verifica se uma posição (x, y) está dentro dos limites de uma empresa.
+ *
+ * @param x coordenada X da posição
+ * @param y coordenada Y da posição
+ * @param serverLocation slice com os limites da empresa [xMin, xMax, yMin, yMax]
+ * @return bool true se estiver dentro dos limites, false caso contrário
  */
 func IsPositionInCompanyLimits(x, y int, serverLocation []int) bool {
-
 	if (x >= serverLocation[0] && x <= serverLocation[1]) && (y >= serverLocation[2] && y <= serverLocation[3]) {
 		fmt.Println("🚗 O carro está dentro dos limites da empresa.")
 		return true
@@ -75,8 +67,15 @@ func IsPositionInCompanyLimits(x, y int, serverLocation []int) bool {
 	return false
 }
 
+/**
+ * Tenta reservar um ponto de recarga para um carro.
+ * Percorre o mapa de estações e reserva a primeira que estiver livre (valor 0).
+ *
+ * @param carID ID do carro que solicita a reserva
+ * @param stationsSpots mapa de estações com seus respectivos IDs de reserva (0 = livre)
+ * @return string nome da estação reservada, ou string vazia se nenhuma estiver disponível
+ */
 func StationReservation(carID int, stationsSpots map[string]int) string {
-	//Procura um ponto de recarga disponível e reserva
 	for station, reservation := range stationsSpots {
 		if reservation == 0 {
 			stationsSpots[station] = carID
@@ -86,6 +85,14 @@ func StationReservation(carID int, stationsSpots map[string]int) string {
 	return ""
 }
 
+/**
+ * Envia a posição atual do carro (x, y) para os demais servidores da rede,
+ * exceto para o servidor local.
+ *
+ * @param x coordenada X da posição do carro
+ * @param y coordenada Y da posição do carro
+ * @param serverName nome do servidor atual (para evitar autoenvio)
+ */
 func SendPositionToServers(x, y int, serverName string) {
 	servers_ip := []string{"8081", "8082", "8083", "8084"}
 	servers := []string{"empresa-a", "empresa-b", "empresa-c", "empresa-d"}
@@ -94,7 +101,7 @@ func SendPositionToServers(x, y int, serverName string) {
 		name := servers[i]
 		ip := servers_ip[i]
 
-		// Verifica se o servidor atual é o mesmo que o servidor local, ou seja, não envia a posição para si mesmo
+		// Evita envio para o próprio servidor
 		if name == serverName {
 			continue
 		}
