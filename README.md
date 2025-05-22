@@ -62,4 +62,4 @@ Os servidores expõem as seguintes rotas:
 ## Autores
 - Kauan Caio de Arruda Farias
 - Nathielle Cerqueira Alves
-- Vitória Tanan 
+- Vitória Tanan dos Santos
